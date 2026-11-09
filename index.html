@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Labo virtuel 1ère STI2D : brancher un voltmètre et un ampèremètre, analogie hydraulique, défis et quiz sur la tension et l'intensité.">
+<title>Tension ou intensité ?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Share+Tech+Mono&display=swap">
+<style>
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+
+/* Layout : paillasse en deux plans (circuit | circuit d'eau), multimètre et défis dessous, puis quiz et mémo.
+   Couleurs du manuel : tension en bleu, intensité en rouge. */
+:root{
+  --paper:#EEF2F5; --surface:#FFFFFF; --ink:#14202B; --muted:#55636F; --line:#C9D3DB;
+  --tension:#1E64C8; --courant:#CC2E38; --water:#9CCDE8; --water-ink:#1C6E9C;
+  --lamp:#F4B400; --ok:#24804F; --warn:#B9471B;
+  --lcd-bg:#C6D1AE; --lcd-ink:#18210E; --case:#2B3540; --case-ink:#E8EDF1;
+  --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-lcd:"Share Tech Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#0E151C; --surface:#16202A; --ink:#E4EBF0; --muted:#97A6B2; --line:#2A3946;
+    --tension:#5FA0F2; --courant:#F06A72; --water:#2B5F7F; --water-ink:#8FD0F2;
+    --lamp:#FFC933; --ok:#5CC48C; --warn:#F08A5D; --case:#0A0F14; --case-ink:#E4EBF0;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#0E151C; --surface:#16202A; --ink:#E4EBF0; --muted:#97A6B2; --line:#2A3946;
+  --tension:#5FA0F2; --courant:#F06A72; --water:#2B5F7F; --water-ink:#8FD0F2;
+  --lamp:#FFC933; --ok:#5CC48C; --warn:#F08A5D; --case:#0A0F14; --case-ink:#E4EBF0;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:24px 64px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.1}
+h1{font-size:clamp(2rem,5vw,3.4rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.6rem;font-weight:800}
+h3{font-size:1.1rem;font-weight:600}
+p{margin:0}
+.eyebrow{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.t{color:var(--tension);font-weight:700}.c{color:var(--courant);font-weight:700}
+header{display:grid;gap:12px}
+header .lede{max-width:65ch;font-size:1.1rem;color:var(--muted)}
+header .lede b{color:var(--ink)}
+section{display:flex;flex-direction:column;gap:16px}
+.sec-head{display:flex;flex-direction:column;gap:6px;max-width:70ch}
+.sec-head p{color:var(--muted)}
+
+/* Barre de réglages */
+.controls{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.ctl{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ctl label,.ctl .lab{font-size:.85rem;color:var(--muted);font-weight:700}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:.9rem;border:0;background:transparent;color:var(--ink);padding:7px 12px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+input[type=range]{width:170px;accent-color:var(--tension)}
+.uval{font-family:var(--f-lcd);font-size:1.1rem;color:var(--tension);min-width:5ch;font-variant-numeric:tabular-nums}
+.btn{font:inherit;font-size:.9rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px;border-radius:8px;cursor:pointer}
+.btn:hover{border-color:var(--ink)}
+button:focus-visible,[tabindex]:focus-visible,input:focus-visible{outline:3px solid var(--tension);outline-offset:2px}
+
+/* Paillasse */
+.bench{display:grid;grid-template-columns:1.15fr 1fr;gap:16px}
+.plate{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.plate-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.plate-h small{color:var(--muted);font-size:.8rem}
+.plate svg{width:100%;height:auto;display:block}
+.hint{font-size:.85rem;color:var(--muted)}
+svg text{font-family:var(--f-body)}
+.hit-node{cursor:pointer}
+.hit-wire{cursor:crosshair}
+.sw-hit{cursor:pointer}
+
+/* Multimètre + défis */
+.lower{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
+.meter{background:var(--case);color:var(--case-ink);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.meter .brand{display:flex;justify-content:space-between;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;opacity:.75}
+.lcd{background:var(--lcd-bg);color:var(--lcd-ink);border-radius:8px;padding:10px 14px;font-family:var(--f-lcd);display:flex;flex-direction:column;gap:2px;box-shadow:inset 0 2px 6px rgba(0,0,0,.25)}
+.lcd .top{display:flex;justify-content:space-between;font-size:.85rem}
+.lcd .val{font-size:2.8rem;line-height:1;text-align:right;font-variant-numeric:tabular-nums}
+.lcd .val small{font-size:1.2rem;margin-left:6px}
+.meter .seg{border-color:#4A5865}
+.meter .seg button{color:var(--case-ink)}
+.meter .seg button+button{border-left-color:#4A5865}
+.meter .seg button[aria-pressed="true"]{background:var(--case-ink);color:var(--case)}
+.meter .row{display:flex;gap:8px;flex-wrap:wrap}
+.meter .btn{background:transparent;color:var(--case-ink);border-color:#4A5865}
+.meter .btn:hover{border-color:var(--case-ink)}
+.feedback{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:.95rem;display:flex;flex-direction:column;gap:6px}
+.feedback.good{border-left:5px solid var(--ok)}
+.feedback.bad{border-left:5px solid var(--warn)}
+.feedback .tag{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.feedback.good .tag{color:var(--ok)} .feedback.bad .tag{color:var(--warn)}
+.left-col{display:flex;flex-direction:column;gap:12px}
+
+.missions{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.missions-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.score{font-family:var(--f-lcd);font-size:1.1rem}
+.missions ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.missions li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;padding:8px 0;border-top:1px solid var(--line)}
+.missions li:first-child{border-top:0}
+.chk{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:.8rem;font-weight:700;color:var(--muted)}
+.missions li.done .chk{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.missions li .q{font-weight:700}
+.missions li .why{color:var(--muted);font-size:.9rem}
+.missions li.done .why{color:var(--ink)}
+.missions li .why:empty{display:none}
+
+/* Quiz */
+.quiz{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.card .num{font-family:var(--f-lcd);color:var(--muted);font-size:.85rem}
+.card .stmt{font-weight:700}
+.card .ans{display:flex;gap:8px}
+.card .ans button{font:inherit;font-weight:700;padding:6px 16px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.card .ans button:disabled{cursor:default}
+.card.right{border-color:var(--ok)} .card.wrong{border-color:var(--warn)}
+.card .ex{font-size:.92rem;color:var(--ink)}
+.card .ex b.v{color:var(--ok)} .card .ex b.x{color:var(--warn)}
+.quiz-bar{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+
+/* Mémo */
+.memo-wrap{overflow-x:auto}
+table.memo{border-collapse:collapse;width:100%;min-width:640px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.memo th,.memo td{padding:10px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+.memo thead th{font-family:var(--f-display);font-size:1.15rem}
+.memo thead th:nth-child(2){color:var(--tension)} .memo thead th:nth-child(3){color:var(--courant)}
+.memo tbody th{color:var(--muted);font-size:.85rem;text-transform:uppercase;letter-spacing:.08em;width:22%}
+.memo tr:last-child td,.memo tr:last-child th{border-bottom:0}
+
+@media (max-width:900px){.bench,.lower{grid-template-columns:1fr}.quiz{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <span class="eyebrow">1ère STI2D · Chapitre 2 · Grandeurs électriques</span>
+  <h1>Tension ou intensité&nbsp;?</h1>
+  <p class="lede">La <b class="t">tension U</b> (en volts) se mesure <b>entre deux points</b>, comme un dénivelé. L'<b class="c">intensité I</b> (en ampères) se mesure <b>en un point</b> du circuit, comme un débit d'eau. Branche le multimètre, observe le circuit d'eau, et relève les défis.</p>
+</header>
+
+<section aria-labelledby="lab-t">
+  <div class="sec-head">
+    <span class="eyebrow">Partie 1</span>
+    <h2 id="lab-t">Le labo</h2>
+  </div>
+
+  <div class="controls">
+    <div class="ctl"><span class="lab">Montage</span>
+      <div class="seg" id="cfgSeg">
+        <button id="cfg-un" data-cfg="un">1 lampe</button>
+        <button id="cfg-serie" data-cfg="serie">2 lampes en série</button>
+        <button id="cfg-der" data-cfg="der">2 lampes en dérivation</button>
+      </div>
+    </div>
+    <div class="ctl"><label for="uSlider">Tension du générateur</label>
+      <input type="range" id="uSlider" min="0" max="12" step="0.5" value="6">
+      <span class="uval" id="uVal">6,0 V</span>
+    </div>
+    <div class="ctl"><span class="lab">Interrupteur K</span>
+      <button class="btn" id="kBtn">Ouvrir K</button>
+    </div>
+  </div>
+
+  <div class="bench">
+    <div class="plate">
+      <div class="plate-h"><h3>Le circuit électrique</h3><small>Lampes identiques, R = 24 Ω</small></div>
+      <svg id="circ" viewBox="0 0 470 320" role="img" aria-label="Schéma du circuit électrique avec points cliquables"></svg>
+      <p class="hint"><b>Voltmètre</b> : clique sur deux points (1er clic = borne V, 2e clic = borne COM). <b>Ampèremètre</b> : clique sur un fil pour l'y insérer. Clique sur K pour l'ouvrir ou le fermer. Les points rouges sont les porteurs de charge : ils sont partout, ils n'avancent que s'il y a un courant.</p>
+    </div>
+    <div class="plate">
+      <div class="plate-h"><h3>Le même circuit, avec de l'eau</h3><small>La hauteur suit les tensions réelles</small></div>
+      <svg id="water" viewBox="0 0 390 320" role="img" aria-label="Analogie hydraulique : pompe, vanne et turbines"></svg>
+      <p class="hint">Pompe = générateur · vanne = interrupteur · turbine = lampe. <span class="t">Dénivelé = tension</span>. <span class="c">Débit = intensité</span>. Quand on ferme la vanne, l'eau s'arrête mais la pompe maintient toujours le dénivelé.</p>
+    </div>
+  </div>
+
+  <div class="lower">
+    <div class="left-col">
+      <div class="meter">
+        <div class="brand"><span>Multimètre</span><span id="dcTag">DC</span></div>
+        <div class="lcd" aria-live="polite">
+          <div class="top"><span id="lcdMode">VOLTMÈTRE</span><span id="lcdWhere"></span></div>
+          <div class="val"><span id="lcdVal">-- --</span><small id="lcdUnit">V</small></div>
+        </div>
+        <div class="seg" id="modeSeg">
+          <button id="mode-V" data-mode="V">Voltmètre (V)</button>
+          <button id="mode-A" data-mode="A">Ampèremètre (A)</button>
+        </div>
+        <div class="row">
+          <button class="btn" id="flipBtn">Inverser les bornes</button>
+          <button class="btn" id="clearBtn">Débrancher</button>
+        </div>
+      </div>
+      <div class="feedback" id="fb"><span class="tag">Mesure</span><span id="fbText"></span></div>
+    </div>
+
+    <div class="missions">
+      <div class="missions-h"><h3>Défis</h3><span class="score" id="mScore">0 / 8</span></div>
+      <ol id="mList"></ol>
+      <button class="btn" id="mReset" style="align-self:flex-start">Recommencer les défis</button>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="quiz-t">
+  <div class="sec-head">
+    <span class="eyebrow">Partie 2</span>
+    <h2 id="quiz-t">Vrai ou faux&nbsp;?</h2>
+    <p>Réponds d'abord seul, puis on compare à l'oral. Chaque réponse est expliquée.</p>
+  </div>
+  <div class="quiz-bar"><span class="score" id="qScore">Score : 0 / 0</span><button class="btn" id="qReset">Recommencer le quiz</button></div>
+  <div class="quiz" id="quiz"></div>
+</section>
+
+<section aria-labelledby="memo-t">
+  <div class="sec-head">
+    <span class="eyebrow">À retenir</span>
+    <h2 id="memo-t">Deux grandeurs, deux façons de mesurer</h2>
+  </div>
+  <div class="memo-wrap">
+  <table class="memo">
+    <thead><tr><th></th><th>Tension</th><th>Intensité</th></tr></thead>
+    <tbody>
+      <tr><th>Notation, unité</th><td>U ou u(t), en volt (V)</td><td>I ou i(t), en ampère (A)</td></tr>
+      <tr><th>Où ?</th><td>Entre deux points du circuit</td><td>En un point du circuit (dans un fil)</td></tr>
+      <tr><th>Appareil</th><td>Voltmètre, branché <b>en parallèle</b> (aux bornes)</td><td>Ampèremètre, branché <b>en série</b> (on ouvre le circuit pour l'insérer)</td></tr>
+      <tr><th>Sens de la flèche</th><td>Talon de la flèche côté COM</td><td>Le courant sort par la borne COM</td></tr>
+      <tr><th>Analogie eau</th><td>Dénivelé (différence de hauteur)</td><td>Débit (quantité d'eau par seconde)</td></tr>
+      <tr><th>Sans courant ?</th><td>Peut exister : pile seule, interrupteur ouvert</td><td>Nulle si le circuit est ouvert</td></tr>
+      <tr><th>Loi</th><td>Loi des mailles : somme algébrique nulle dans une maille</td><td>Loi des nœuds : somme des entrants = somme des sortants</td></tr>
+      <tr><th>En série</th><td>Se partage entre les dipôles</td><td>Identique partout</td></tr>
+      <tr><th>En dérivation</th><td>Identique aux bornes de chaque branche</td><td>Se partage entre les branches</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+</div>
+
+<script>
+(function(){
+const R=24, GW=1e4, GOPEN=1e-9, GV=1e-7, FUSE=3;
+const NS="http://www.w3.org/2000/svg";
+const CFG={
+ un:{gp:'A',gm:'F',
+  nodes:{A:[60,60],B:[150,60],C:[230,60],D:[410,60],E:[410,260],F:[60,260]},
+  els:[{id:'gen',k:'gen',a:'F',b:'A'},{id:'w1',k:'wire',a:'A',b:'B',tag:'main'},{id:'K',k:'sw',a:'B',b:'C'},
+       {id:'w2',k:'wire',a:'C',b:'D',tag:'main'},{id:'L1',k:'lamp',a:'D',b:'E'},{id:'w3',k:'wire',a:'E',b:'F',tag:'main'}],
+  water:[{el:'gen',p:[[50,'F'],[50,'A']]},{el:'w1',p:[[50,'A'],[115,'A']]},{el:'K',p:[[115,'A'],[115,'C']],valve:1},
+         {el:'w2',p:[[115,'C'],[270,'D']]},{el:'L1',p:[[270,'D'],[270,'E']],turb:'L1'},{el:'w3',p:[[270,'E'],[50,'F']]}]},
+ serie:{gp:'A',gm:'H',
+  nodes:{A:[60,60],B:[140,60],C:[220,60],D:[260,60],E:[350,60],F:[410,110],G:[410,210],H:[60,260]},
+  els:[{id:'gen',k:'gen',a:'H',b:'A'},{id:'w1',k:'wire',a:'A',b:'B',tag:'main'},{id:'K',k:'sw',a:'B',b:'C'},
+       {id:'w2',k:'wire',a:'C',b:'D',tag:'main'},{id:'L1',k:'lamp',a:'D',b:'E'},{id:'w3',k:'wire',a:'E',b:'F',via:[[410,60]],tag:'mid'},
+       {id:'L2',k:'lamp',a:'F',b:'G'},{id:'w4',k:'wire',a:'G',b:'H',via:[[410,260]],tag:'main'}],
+  water:[{el:'gen',p:[[50,'H'],[50,'A']]},{el:'w1',p:[[50,'A'],[115,'A']]},{el:'K',p:[[115,'A'],[115,'C']],valve:1},
+         {el:'w2',p:[[115,'C'],[200,'D']]},{el:'L1',p:[[200,'D'],[200,'E']],turb:'L1'},{el:'w3',p:[[200,'E'],[300,'F']]},
+         {el:'L2',p:[[300,'F'],[300,'G']],turb:'L2'},{el:'w4',p:[[300,'G'],[50,'H']]}]},
+ der:{gp:'A',gm:'M',
+  nodes:{A:[60,60],B:[140,60],C:[210,60],D:[270,60],E:[270,115],F:[270,205],G:[270,260],H:[410,115],J:[410,205],M:[60,260]},
+  els:[{id:'gen',k:'gen',a:'M',b:'A'},{id:'w1',k:'wire',a:'A',b:'B',tag:'main'},{id:'K',k:'sw',a:'B',b:'C'},
+       {id:'w2',k:'wire',a:'C',b:'D',tag:'main'},{id:'w3',k:'wire',a:'D',b:'E',tag:'b1'},{id:'L1',k:'lamp',a:'E',b:'F'},
+       {id:'w4',k:'wire',a:'F',b:'G',tag:'b1'},{id:'w5',k:'wire',a:'D',b:'H',via:[[410,60]],tag:'b2'},
+       {id:'L2',k:'lamp',a:'H',b:'J'},{id:'w6',k:'wire',a:'J',b:'G',via:[[410,260]],tag:'b2'},{id:'w7',k:'wire',a:'G',b:'M',tag:'main'}],
+  water:[{el:'gen',p:[[50,'M'],[50,'A']]},{el:'w1',p:[[50,'A'],[115,'A']]},{el:'K',p:[[115,'A'],[115,'C']],valve:1},
+         {el:'w2',p:[[115,'C'],[200,'D']]},{el:'L1',p:[[200,'D'],[200,'F']],turb:'L1'},{el:'w5',p:[[200,'D'],[310,'H']]},
+         {el:'L2',p:[[310,'H'],[310,'J']],turb:'L2'},{el:'w6',p:[[310,'J'],[200,'G']]},{el:'w7',p:[[200,'G'],[50,'M']]}]}
+};
+const S={cfg:'serie',U:6,K:true,mode:'V',meas:{type:'V',v:'D',com:'E'},pending:null,flip:false,blown:false,preset:true};
+let sol=null;
+
+/* ---------- utilitaires ---------- */
+const $=id=>document.getElementById(id);
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e;}
+function fmt(x,d){let s=Math.abs(x)<0.5*Math.pow(10,-d)?0:x;return s.toFixed(d).replace('.',',');}
+function pts(c,e){return [c.nodes[e.a],...(e.via||[]),c.nodes[e.b]];}
+function polyLen(p){let L=[0];for(let i=1;i<p.length;i++)L.push(L[i-1]+Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]));return L;}
+function at(p,L,s){const tot=L[L.length-1];if(tot===0)return p[0];s=((s%tot)+tot)%tot;for(let i=1;i<p.length;i++){if(s<=L[i]){const t=(s-L[i-1])/((L[i]-L[i-1])||1);return [p[i-1][0]+t*(p[i][0]-p[i-1][0]),p[i-1][1]+t*(p[i][1]-p[i-1][1])];}}return p[p.length-1];}
+function nets(c){const par={};Object.keys(c.nodes).forEach(n=>par[n]=n);const f=x=>par[x]===x?x:(par[x]=f(par[x]));c.els.forEach(e=>{if(e.k==='wire')par[f(e.a)]=f(e.b);});const o={};Object.keys(c.nodes).forEach(n=>o[n]=f(n));return o;}
+function samePair(nt,a,b,c,d){const x=[nt[a],nt[b]].sort().join(),y=[nt[c],nt[d]].sort().join();return x===y;}
+
+/* ---------- solveur (analyse nodale) ---------- */
+function gauss(M,b){const n=b.length;for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;[M[c],M[p]]=[M[p],M[c]];[b[c],b[p]]=[b[p],b[c]];const d=M[c][c]||1e-30;for(let r=c+1;r<n;r++){const f=M[r][c]/d;if(!f)continue;for(let k=c;k<n;k++)M[r][k]-=f*M[c][k];b[r]-=f*b[c];}}const x=new Array(n).fill(0);for(let r=n-1;r>=0;r--){let s=b[r];for(let k=r+1;k<n;k++)s-=M[r][k]*x[k];x[r]=s/(M[r][r]||1e-30);}return x;}
+function solve(){
+  const c=CFG[S.cfg],U=S.blown?0:S.U,m=S.meas;
+  const br=[];
+  c.els.forEach(e=>{if(e.k==='gen')return;let g=e.k==='lamp'?1/R:e.k==='sw'?(S.K?GW:GOPEN):GW;
+    if(m&&m.type==='Vser'&&m.el===e.id)g=GV;br.push({id:e.id,a:e.a,b:e.b,g});});
+  if(m&&m.type==='Apar')br.push({id:'meter',a:m.a,b:m.b,g:GW});
+  if(m&&m.type==='V')br.push({id:'vm',a:m.v,b:m.com,g:GV});
+  const fixed={};fixed[c.gp]=U;fixed[c.gm]=0;
+  const unk=Object.keys(c.nodes).filter(n=>!(n in fixed));const idx={};unk.forEach((n,i)=>idx[n]=i);
+  const n=unk.length,M=Array.from({length:n},()=>new Array(n).fill(0)),rhs=new Array(n).fill(0);
+  br.forEach(({a,b,g})=>{[[a,b],[b,a]].forEach(([p,q])=>{if(!(p in idx))return;M[idx[p]][idx[p]]+=g;if(q in idx)M[idx[p]][idx[q]]-=g;else rhs[idx[p]]+=g*fixed[q];});});
+  const x=gauss(M,rhs),V={...fixed};unk.forEach((nn,i)=>V[nn]=x[i]);
+  const I={};let Ig=0;br.forEach(b=>{I[b.id]=b.g*(V[b.a]-V[b.b]);if(b.a===c.gp)Ig+=I[b.id];if(b.b===c.gp)Ig-=I[b.id];});
+  I.gen=Ig;return {V,I,Ig};
+}
+
+/* ---------- dessin du circuit ---------- */
+const circ=$('circ'),water=$('water');
+let flows=[],offsets={},turbAngle={};
+function buildCircuit(){
+  circ.innerHTML='';const c=CFG[S.cfg];
+  const defs=el('defs',{},circ);
+  const rg=el('radialGradient',{id:'glow'},defs);el('stop',{offset:'0','stop-color':'var(--lamp)','stop-opacity':'.9'},rg);el('stop',{offset:'1','stop-color':'var(--lamp)','stop-opacity':'0'},rg);
+  ['t','c'].forEach(k=>{const mk=el('marker',{id:'ar'+k,viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'7',markerHeight:'7',orient:'auto-start-reverse'},defs);el('path',{d:'M0,0 L10,5 L0,10 z',fill:k==='t'?'var(--tension)':'var(--courant)'},mk);});
+  const gW=el('g',{id:'gWires'},circ),gC=el('g',{id:'gComp'},circ),gD=el('g',{id:'gDots'},circ),gM=el('g',{id:'gMeas'},circ),gH=el('g',{id:'gHit'},circ);
+  c.els.forEach(e=>{const p=pts(c,e);
+    if(e.k!=='sw')el('polyline',{points:p.map(q=>q.join(',')).join(' '),fill:'none',stroke:'var(--ink)','stroke-width':'2.5','stroke-linejoin':'round'},gW);
+  });
+  c.els.forEach(e=>{const p=pts(c,e),A=p[0],B=p[p.length-1],mx=(A[0]+B[0])/2,my=(A[1]+B[1])/2;
+    if(e.k==='gen'){el('circle',{cx:mx,cy:my,r:24,fill:'var(--surface)',stroke:'var(--ink)','stroke-width':'2.5'},gC);
+      el('line',{x1:mx,y1:my-24,x2:mx,y2:my+24,stroke:'var(--ink)','stroke-width':'2'},gC);
+      el('text',{x:mx+12,y:my-28,'font-size':'16','font-weight':'700',fill:'var(--ink)'},gC).textContent='+';
+      el('line',{x1:mx-38,y1:my+28,x2:mx-38,y2:my-28,stroke:'var(--tension)','stroke-width':'2.5','marker-end':'url(#art)'},gC);
+      const t=el('text',{x:mx+32,y:my+5,'text-anchor':'start','font-size':'13','font-weight':'700',fill:'var(--tension)',id:'genLab'},gC);t.textContent='U';
+    }
+    if(e.k==='lamp'){el('circle',{cx:mx,cy:my,r:38,fill:'url(#glow)',opacity:0,id:'halo-'+e.id},gC);
+      el('circle',{cx:mx,cy:my,r:15,fill:'var(--surface)',stroke:'var(--ink)','stroke-width':'2.5',id:'bulb-'+e.id},gC);
+      const d=10.6;el('path',{d:`M${mx-d},${my-d}L${mx+d},${my+d}M${mx+d},${my-d}L${mx-d},${my+d}`,stroke:'var(--ink)','stroke-width':'2'},gC);
+      const vert=Math.abs(A[0]-B[0])<1;
+      el('text',{x:vert?mx+22:mx,y:vert?my+5:my-22,'text-anchor':vert?'start':'middle','font-size':'13','font-weight':'700',fill:'var(--muted)'},gC).textContent=e.id;
+    }
+    if(e.k==='sw'){const g=el('g',{id:'swg'},gC);
+      el('circle',{cx:A[0],cy:A[1],r:3.5,fill:'var(--ink)'},g);el('circle',{cx:B[0],cy:B[1],r:3.5,fill:'var(--ink)'},g);
+      el('line',{x1:A[0],y1:A[1],x2:B[0],y2:B[1],stroke:'var(--ink)','stroke-width':'2.5','stroke-linecap':'round',id:'lever'},g);
+      el('text',{x:mx,y:A[1]+24,'text-anchor':'middle','font-size':'13','font-weight':'700',fill:'var(--muted)'},g).textContent='K';
+      const h=el('rect',{x:A[0]-4,y:A[1]-34,width:B[0]-A[0]+8,height:44,fill:'transparent',class:'sw-hit',tabindex:'0',role:'button','aria-label':'Ouvrir ou fermer l’interrupteur K'},gH);
+      h.addEventListener('click',()=>toggleK());h.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();toggleK();}});
+    }
+  });
+  // charges mobiles
+  flows=[];
+  c.els.forEach(e=>{if(e.k==='sw')return;const p=pts(c,e),L=polyLen(p),tot=L[L.length-1],n=Math.max(1,Math.floor(tot/22)),dots=[];
+    for(let i=0;i<n;i++)dots.push(el('circle',{r:2.6,fill:'var(--courant)',opacity:.85},gD));
+    flows.push({key:'c-'+e.id,id:e.id,p,L,tot,dots,sp:tot/n});});
+  // zones cliquables : fils puis nœuds
+  c.els.forEach(e=>{if(e.k!=='wire')return;const p=pts(c,e);
+    const h=el('polyline',{points:p.map(q=>q.join(',')).join(' '),fill:'none',stroke:'transparent','stroke-width':'18',class:'hit-wire',tabindex:'0',role:'button','aria-label':'Fil entre '+e.a+' et '+e.b},gH);
+    h.addEventListener('click',()=>clickWire(e.id));h.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();clickWire(e.id);}});});
+  Object.entries(c.nodes).forEach(([id,[x,y]])=>{
+    const g=el('g',{class:'hit-node',tabindex:'0',role:'button','aria-label':'Point '+id},gH);
+    el('circle',{cx:x,cy:y,r:13,fill:'transparent'},g);
+    el('circle',{cx:x,cy:y,r:4.5,fill:'var(--surface)',stroke:'var(--ink)','stroke-width':'2',id:'nd-'+id},g);
+    const left=x<100,bottom=y>240;
+    el('text',{x:x+(left?-14:10),y:y+(bottom?20:-10),'text-anchor':left?'end':'start','font-size':'14','font-weight':'700',fill:'var(--ink)'},g).textContent=id;
+    g.addEventListener('click',()=>clickNode(id));g.addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();clickNode(id);}});
+  });
+}
+
+/* ---------- dessin de l'eau ---------- */
+const yB=275,H=190;const yv=v=>yB-Math.max(0,Math.min(12,v))/12*H;
+function buildWater(){
+  water.innerHTML='';const c=CFG[S.cfg];
+  el('rect',{x:20,y:yB+8,width:330,height:22,rx:4,fill:'var(--water)',opacity:.45},water);
+  el('text',{x:185,y:yB+24,'text-anchor':'middle','font-size':'11',fill:'var(--muted)'},water).textContent='niveau de référence (0 V)';
+  const gP=el('g',{},water),gT=el('g',{},water),gD=el('g',{},water),gA=el('g',{},water);
+  const segs=c.water.map(s=>{const p=s.p.map(([x,n])=>[x,yv(sol.V[n])]);return {...s,pp:p};});
+  segs.forEach(s=>el('polyline',{points:s.pp.map(q=>q.join(',')).join(' '),fill:'none',stroke:'var(--water)','stroke-width':'11','stroke-linecap':'round','stroke-linejoin':'round'},gP));
+  // pompe
+  const g0=segs[0].pp,pm=[g0[0][0],(g0[0][1]+g0[1][1])/2];
+  el('circle',{cx:pm[0],cy:pm[1],r:15,fill:'var(--surface)',stroke:'var(--water-ink)','stroke-width':'2.5'},gT);
+  el('path',{d:`M${pm[0]-6},${pm[1]+6}L${pm[0]},${pm[1]-7}L${pm[0]+6},${pm[1]+6}z`,fill:'var(--water-ink)'},gT);
+  el('text',{x:pm[0]+22,y:pm[1]+4,'font-size':'12',fill:'var(--muted)'},gT).textContent='pompe';
+  // vanne
+  const vs=segs.find(s=>s.valve),vx=vs.pp[0][0],vy=vs.pp[0][1];
+  if(S.K)el('rect',{x:vx-4,y:vy-34,width:8,height:18,rx:2,fill:'none',stroke:'var(--ink)','stroke-width':'2'},gT);
+  else el('rect',{x:vx-4,y:vy-12,width:8,height:24,rx:2,fill:'var(--ink)'},gT);
+  el('text',{x:vx,y:vy-40,'text-anchor':'middle','font-size':'12',fill:'var(--muted)'},gT).textContent=S.K?'vanne ouverte':'vanne fermée';
+  // turbines + tensions
+  segs.filter(s=>s.turb).forEach(s=>{const [a,b]=s.pp,cx=a[0],cy=(a[1]+b[1])/2;
+    const g=el('g',{id:'turb-'+s.turb,transform:`translate(${cx},${cy})`},gT);
+    el('circle',{r:14,fill:'var(--surface)',stroke:'var(--ink)','stroke-width':'2'},g);
+    const sp=el('g',{class:'spokes'},g);for(let k=0;k<4;k++){const an=k*Math.PI/4;el('line',{x1:-12*Math.cos(an),y1:-12*Math.sin(an),x2:12*Math.cos(an),y2:12*Math.sin(an),stroke:'var(--ink)','stroke-width':'2'},sp);}
+    const dv=sol.V[s.p[0][1]]-sol.V[s.p[1][1]];
+    el('text',{x:cx+20,y:cy-2,'font-size':'12','font-weight':'700',fill:'var(--muted)'},gA).textContent='turbine '+s.turb;
+    el('text',{x:cx+20,y:cy+13,'font-size':'12','font-weight':'700',fill:'var(--tension)'},gA).textContent='chute '+fmt(dv,1)+' V';
+  });
+  // cote du dénivelé total
+  const top=yv(S.blown?0:S.U);
+  if(S.U>0&&!S.blown){el('line',{x1:370,y1:yB,x2:370,y2:top,stroke:'var(--tension)','stroke-width':'2','marker-end':'url(#wart)'},gA);
+    el('line',{x1:40,y1:top,x2:376,y2:top,stroke:'var(--tension)','stroke-width':'1','stroke-dasharray':'3 4'},gA);}
+  const d=el('defs',{},water),mk=el('marker',{id:'wart',viewBox:'0 0 10 10',refX:'9',refY:'5',markerWidth:'7',markerHeight:'7',orient:'auto'},d);el('path',{d:'M0,0 L10,5 L0,10 z',fill:'var(--tension)'},mk);
+  el('text',{x:364,y:Math.min(top-8,yB-8),'text-anchor':'end','font-size':'13','font-weight':'700',fill:'var(--tension)'},gA).textContent='dénivelé ↔ U = '+fmt(S.blown?0:S.U,1)+' V';
+  el('text',{x:20,y:22,'font-size':'13','font-weight':'700',fill:'var(--courant)'},gA).textContent='débit total ↔ I = '+fmt(Math.abs(sol.I.gen),3)+' A';
+  // gouttes
+  segs.forEach(s=>{const L=polyLen(s.pp),tot=L[L.length-1],n=Math.max(1,Math.floor(tot/16)),dots=[];
+    for(let i=0;i<n;i++)dots.push(el('circle',{r:2.6,fill:'var(--water-ink)'},gD));
+    flows.push({key:'w-'+s.el+s.pp[0][0],id:s.el,p:s.pp,L,tot,dots,sp:tot/n,water:true});});
+}
+
+/* ---------- mesure : affichage ---------- */
+function arcPath(a,b){const [x1,y1]=a,[x2,y2]=b,mx=(x1+x2)/2,my=(y1+y2)/2;let nx=-(y2-y1),ny=x2-x1;const l=Math.hypot(nx,ny)||1;nx/=l;ny/=l;
+  if((mx+nx-235)*(mx+nx-235)+(my+ny-160)*(my+ny-160)<(mx-nx-235)*(mx-nx-235)+(my-ny-160)*(my-ny-160)){nx=-nx;ny=-ny;}
+  const k=Math.min(60,20+l*0.12),cx=mx+nx*k,cy=my+ny*k;return {d:`M${x1},${y1} Q${cx},${cy} ${x2},${y2}`,mid:[0.25*x1+0.5*cx+0.25*x2,0.25*y1+0.5*cy+0.25*y2]};}
+function meterBadge(g,[x,y],letter,col){el('circle',{cx:x,cy:y,r:13,fill:'var(--surface)',stroke:col,'stroke-width':'2.5'},g);
+  el('text',{x,y:y+5,'text-anchor':'middle','font-size':'14','font-weight':'700',fill:col},g).textContent=letter;}
+function drawMeas(){
+  const g=$('gMeas');g.innerHTML='';const c=CFG[S.cfg],m=S.meas;
+  Object.keys(c.nodes).forEach(n=>{const d=$('nd-'+n);d.setAttribute('fill',S.pending===n?'var(--tension)':'var(--surface)');d.setAttribute('r',S.pending===n?6:4.5);});
+  if(!m)return;
+  if(m.type==='V'||m.type==='Apar'){const a=c.nodes[m.type==='V'?m.com:m.a],b=c.nodes[m.type==='V'?m.v:m.b],ar=arcPath(a,b),col=m.type==='V'?'var(--tension)':'var(--warn)';
+    el('path',{d:ar.d,fill:'none',stroke:col,'stroke-width':'2.5','stroke-dasharray':m.type==='Apar'?'6 4':'0','marker-end':m.type==='V'?'url(#art)':''},g);
+    meterBadge(g,ar.mid,m.type==='V'?'V':'A',col);
+    if(m.type==='V'){el('text',{x:a[0]+(a[0]<100?-12:8),y:a[1]+(a[1]>240?-8:20),'text-anchor':a[0]<100?'end':'start','font-size':'11','font-weight':'700',fill:'var(--tension)'},g).textContent='COM';}
+  }
+  if(m.type==='A'||m.type==='Vser'){const e=c.els.find(x=>x.id===m.el),p=pts(c,e),L=polyLen(p),tot=L[L.length-1],mid=at(p,L,tot/2),pre=at(p,L,tot/2-(m.flip?-30:30)),post=at(p,L,tot/2+(m.flip?-24:24));
+    const col=m.type==='A'?'var(--courant)':'var(--warn)';
+    meterBadge(g,mid,m.type==='A'?'A':'V',col);
+    if(m.type==='A'){const q=at(p,L,tot/2-(m.flip?-17:17));el('line',{x1:pre[0],y1:pre[1],x2:q[0],y2:q[1],stroke:'var(--courant)','stroke-width':'2.5','marker-end':'url(#arc)'},g);
+      const off=(Math.abs(p[0][1]-p[p.length-1][1])<1&&e.via==null)?[0,-20]:[16,0];
+      el('text',{x:post[0]+off[0],y:post[1]+off[1]+4,'text-anchor':'middle','font-size':'11','font-weight':'700',fill:'var(--courant)'},g).textContent='COM';}
+  }
+}
+
+/* ---------- lecture + explication ---------- */
+function reading(){
+  const m=S.meas;if(!m)return null;const V=sol.V,I=sol.I;
+  if(m.type==='V')return {u:'V',x:V[m.v]-V[m.com]};
+  if(m.type==='Vser'){const e=CFG[S.cfg].els.find(x=>x.id===m.el);return {u:'V',x:(V[e.a]-V[e.b])*(m.flip?-1:1)};}
+  if(m.type==='A')return {u:'A',x:I[m.el]*(m.flip?-1:1)};
+  if(m.type==='Apar')return {u:'A',x:I.meter};
+}
+function explain(r){
+  const m=S.meas,c=CFG[S.cfg],nt=nets(c);let good=true,txt='';
+  if(S.blown){return {good:false,tag:'Court-circuit',txt:'L’ampèremètre branché en parallèle se comporte comme un simple fil. Le courant est devenu énorme et le fusible a grillé. Clique sur « Débrancher » pour réparer. Un ampèremètre se branche toujours <b>en série</b>.'};}
+  if(!m){return {good:true,tag:'Mesure',txt:S.mode==='V'?'Mode voltmètre : clique sur un premier point (borne V), puis sur un second (borne COM).':'Mode ampèremètre : clique sur un fil pour y insérer l’appareil, en série.'};}
+  if(m.type==='V'){
+    txt=`Tension U<sub>${m.v}${m.com}</sub> = ${fmt(r.x,2)} V. Le voltmètre est branché <b>en parallèle</b>, entre deux points : c'est correct.`;
+    if(Math.abs(r.x)<0.005&&nt[m.v]===nt[m.com])txt+=' Ces deux points sont reliés par un simple fil : ils sont au même « niveau », la tension est nulle même si un courant passe.';
+    else if(Math.abs(r.x)<0.005&&!S.K)txt+=' L’interrupteur est ouvert : aucun courant ne traverse ce dipôle, il n’y a pas de chute de tension à ses bornes.';
+    if(!S.K&&samePair(nt,m.v,m.com,'B','C')&&Math.abs(r.x)>0.05)txt+=' <b>Interrupteur ouvert</b> : I = 0 A, et pourtant toute la tension du générateur se retrouve à ses bornes.';
+    if(r.x<-0.005)txt+=' La valeur est négative car la borne COM est au point le plus « haut ». Inverse les bornes pour obtenir une valeur positive.';
+  } else if(m.type==='A'){
+    txt=`Intensité du courant qui traverse ce fil : ${fmt(r.x,3)} A. L'ampèremètre est branché <b>en série</b> : c'est correct.`;
+    if(r.x<-0.0005)txt+=' Valeur négative : le courant entre par la borne COM, l’appareil est branché « à l’envers ». La valeur absolue reste juste.';
+    if(Math.abs(r.x)<0.0005&&(!S.K||S.U===0))txt+=' Le circuit est ouvert ou le générateur est à 0 V : aucun courant ne circule.';
+  } else if(m.type==='Vser'){
+    good=false;txt=`Voltmètre branché <b>en série</b> : il ne laisse quasiment pas passer le courant. Les lampes de cette branche s'éteignent et il affiche ${fmt(r.x,2)} V, la tension du générateur. Un voltmètre se branche <b>en parallèle</b>.`;
+  } else if(m.type==='Apar'){
+    good=false;txt=`Ampèremètre branché <b>entre deux points</b> (en parallèle) : il se comporte comme un fil et court-circuite tout ce qui se trouve entre ${m.a} et ${m.b}.`;
+    const off=c.els.filter(e=>e.k==='lamp'&&Math.abs(sol.I[e.id])<1e-4).map(e=>e.id);if(off.length&&S.K&&S.U>0)txt+=` ${off.join(' et ')} s'éteint.`;
+    txt+=' Un ampèremètre se branche <b>en série</b>.';
+  }
+  return {good,tag:good?'Branchement correct':'Branchement incorrect',txt};
+}
+
+/* ---------- défis ---------- */
+const MISSIONS=[
+ {q:'Mesure la tension aux bornes du générateur.',why:'Le voltmètre affiche la valeur réglée avec le curseur : c’est le « dénivelé » créé par la pompe.'},
+ {q:'Montage série : mesure l’intensité dans le fil entre les deux lampes, puis dans un autre fil.',why:'Même valeur partout : en série, le courant ne « s’use » pas dans les lampes.'},
+ {q:'Montage série : mesure la tension aux bornes de L1, de L2 et du générateur.',why:'U = U<sub>L1</sub> + U<sub>L2</sub> : c’est la loi des mailles. La tension se partage.'},
+ {q:'Ouvre K : mesure la tension aux bornes de l’interrupteur, puis aux bornes d’une lampe.',why:'Interrupteur ouvert : U<sub>K</sub> = U du générateur, et 0 V aux bornes de la lampe. Une tension peut exister sans courant.'},
+ {q:'Montage dérivation : mesure l’intensité dans chaque branche et dans la branche principale.',why:'I = I<sub>1</sub> + I<sub>2</sub> : c’est la loi des nœuds. Le courant se partage.'},
+ {q:'Obtiens une intensité négative.',why:'Le courant entre par la borne COM : I est une grandeur algébrique.'},
+ {q:'Erreur volontaire : branche le voltmètre en série dans un fil.',why:'Le voltmètre bloque le courant : les lampes s’éteignent.'},
+ {q:'Erreur volontaire : branche l’ampèremètre aux bornes d’une lampe.',why:'L’ampèremètre court-circuite la lampe (et parfois tout le circuit).'}
+];
+let mDone=new Array(8).fill(false),mRec={m2:new Set(),m3:new Set(),m4:new Set(),m5:new Set()};
+function renderMissions(){const ol=$('mList');ol.innerHTML='';MISSIONS.forEach((m,i)=>{const li=document.createElement('li');if(mDone[i])li.className='done';
+  li.innerHTML=`<span class="chk">${mDone[i]?'✓':i+1}</span><div><div class="q">${m.q}</div><div class="why">${mDone[i]?m.why:''}</div></div>`;ol.appendChild(li);});
+  $('mScore').textContent=mDone.filter(Boolean).length+' / 8';}
+function checkMissions(r){
+  const m=S.meas;if(!m||S.preset||!r)return;const c=CFG[S.cfg],nt=nets(c),live=S.U>0&&!S.blown,lamps=c.els.filter(e=>e.k==='lamp');
+  const set=i=>{if(!mDone[i]){mDone[i]=true;renderMissions();}};
+  if(m.type==='V'&&live&&samePair(nt,m.v,m.com,c.gp,c.gm)&&Math.abs(r.x)>0.1)set(0);
+  if(m.type==='A'&&S.cfg==='serie'&&S.K&&live){const e=c.els.find(x=>x.id===m.el);mRec.m2.add(e.tag==='mid'?'mid':'other');if(mRec.m2.size===2)set(1);}
+  if(m.type==='V'&&S.cfg==='serie'&&S.K&&live){if(samePair(nt,m.v,m.com,'D','E'))mRec.m3.add('L1');if(samePair(nt,m.v,m.com,'F','G'))mRec.m3.add('L2');if(samePair(nt,m.v,m.com,c.gp,c.gm))mRec.m3.add('G');if(mRec.m3.size===3)set(2);}
+  if(m.type==='V'&&!S.K&&live){if(samePair(nt,m.v,m.com,'B','C')&&Math.abs(r.x)>0.1)mRec.m4.add('K');if(lamps.some(l=>samePair(nt,m.v,m.com,l.a,l.b))&&Math.abs(r.x)<0.01)mRec.m4.add('L');if(mRec.m4.size===2)set(3);}
+  if(m.type==='A'&&S.cfg==='der'&&S.K&&live){mRec.m5.add(c.els.find(x=>x.id===m.el).tag);if(mRec.m5.size===3)set(4);}
+  if(m.type==='A'&&r.x<-0.005)set(5);
+  if(m.type==='Vser')set(6);
+  if(m.type==='Apar'&&lamps.some(l=>samePair(nt,m.a,m.b,l.a,l.b)))set(7);
+}
+
+/* ---------- interactions ---------- */
+function clickNode(id){
+  if(S.blown)return;S.preset=false;
+  if(!S.pending){S.pending=id;S.meas=null;update();return;}
+  if(S.pending===id){S.pending=null;update();return;}
+  S.meas=S.mode==='V'?{type:'V',v:S.pending,com:id}:{type:'Apar',a:S.pending,b:id};S.pending=null;update();
+}
+function clickWire(id){if(S.blown)return;S.preset=false;S.pending=null;S.meas=S.mode==='A'?{type:'A',el:id,flip:false}:{type:'Vser',el:id,flip:false};update();}
+function toggleK(){S.K=!S.K;S.preset=false;update();}
+function setCfg(k){S.cfg=k;S.meas=null;S.pending=null;S.blown=false;S.preset=false;buildCircuit();update();}
+function setMode(k){S.mode=k;S.meas=null;S.pending=null;update();}
+document.querySelectorAll('#cfgSeg button').forEach(b=>b.addEventListener('click',()=>setCfg(b.dataset.cfg)));
+document.querySelectorAll('#modeSeg button').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+$('uSlider').addEventListener('input',e=>{S.U=+e.target.value;S.preset=false;update();});
+$('kBtn').addEventListener('click',toggleK);
+$('flipBtn').addEventListener('click',()=>{const m=S.meas;if(!m)return;S.preset=false;if(m.type==='V'){[m.v,m.com]=[m.com,m.v];}else if(m.type==='Apar'){[m.a,m.b]=[m.b,m.a];}else m.flip=!m.flip;update();});
+$('clearBtn').addEventListener('click',()=>{S.meas=null;S.pending=null;S.blown=false;update();});
+$('mReset').addEventListener('click',()=>{mDone=new Array(8).fill(false);mRec={m2:new Set(),m3:new Set(),m4:new Set(),m5:new Set()};renderMissions();});
+
+function update(){
+  sol=solve();
+  if(!S.blown&&Math.abs(sol.Ig)>FUSE){S.blown=true;sol=solve();}
+  const c=CFG[S.cfg];
+  $('uVal').textContent=fmt(S.U,1)+' V';$('kBtn').textContent=S.K?'Ouvrir K':'Fermer K';
+  document.querySelectorAll('#cfgSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.cfg===S.cfg));
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===S.mode));
+  const gl=$('genLab');if(gl)gl.textContent='U = '+fmt(S.U,1)+' V';
+  const sw=CFG[S.cfg].els.find(e=>e.id==='K'),A=c.nodes[sw.a],B=c.nodes[sw.b],lev=$('lever');
+  if(S.K){lev.setAttribute('x2',B[0]);lev.setAttribute('y2',B[1]);}else{const L=B[0]-A[0];lev.setAttribute('x2',A[0]+L*Math.cos(0.55));lev.setAttribute('y2',A[1]-L*Math.sin(0.55));}
+  const Pmax=144/R;
+  c.els.filter(e=>e.k==='lamp').forEach(e=>{const P=Math.abs((sol.V[e.a]-sol.V[e.b])*sol.I[e.id]),b=Math.min(1,P/Pmax);
+    $('halo-'+e.id).setAttribute('opacity',b<0.003?0:0.25+0.75*Math.sqrt(b));$('bulb-'+e.id).setAttribute('fill',b<0.003?'var(--surface)':'var(--lamp)');$('bulb-'+e.id).setAttribute('fill-opacity',b<0.003?1:0.35+0.65*Math.sqrt(b));});
+  flows=flows.filter(f=>!f.water);buildWater();
+  drawMeas();
+  const r=reading();
+  $('lcdMode').textContent=S.blown?'FUSIBLE':(S.mode==='V'?'VOLTMÈTRE':'AMPÈREMÈTRE');
+  $('lcdUnit').textContent=r?r.u:(S.mode==='V'?'V':'A');
+  $('lcdVal').textContent=S.blown?'FUSE':r?(r.u==='V'?fmt(r.x,2):fmt(r.x,3)):'-- --';
+  const m=S.meas;$('lcdWhere').textContent=!m?(S.pending?'COM ?':''):m.type==='V'?`U ${m.v}${m.com}`:m.type==='Apar'?`${m.a}–${m.b}`:'fil';
+  const ex=explain(r);const fb=$('fb');fb.className='feedback'+(m||S.blown?(ex.good?' good':' bad'):'');fb.querySelector('.tag').textContent=ex.tag;$('fbText').innerHTML=S.pending?`Point ${S.pending} choisi. Clique maintenant sur un second point.`:ex.txt;
+  checkMissions(r);
+}
+
+/* ---------- animation ---------- */
+const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+let last=performance.now();
+function tick(t){const dt=Math.min(0.05,(t-last)/1000);last=t;
+  if(sol)flows.forEach(f=>{const I=f.id==='gen'?sol.I.gen:(sol.I[f.id]||0);const v=Math.max(-260,Math.min(260,I*(f.water?160:150)));
+    offsets[f.key]=(offsets[f.key]||0)+(reduce?0:v*dt);
+    f.dots.forEach((d,i)=>{const q=at(f.p,f.L,i*f.sp+offsets[f.key]);d.setAttribute('cx',q[0]);d.setAttribute('cy',q[1]);});});
+  if(sol&&!reduce)['L1','L2'].forEach(id=>{const g=document.querySelector('#turb-'+id+' .spokes');if(!g)return;turbAngle[id]=((turbAngle[id]||0)+(sol.I[id]||0)*500*dt)%360;g.setAttribute('transform','rotate('+turbAngle[id]+')');});
+  requestAnimationFrame(tick);}
+
+/* ---------- quiz ---------- */
+const QUIZ=[
+ ['Une pile neuve posée sur la table, sans rien de branché, a une tension à ses bornes.',true,'La pile crée un « dénivelé » même si rien ne coule : on mesure environ 1,5 V avec un voltmètre.'],
+ ['Cette même pile posée sur la table débite un courant.',false,'Le circuit est ouvert : I = 0 A. Tension sans courant, c’est possible.'],
+ ['Le courant « s’use » dans une lampe : il y en a moins après la lampe qu’avant.',false,'En série, l’intensité est la même partout. La lampe convertit de l’énergie, elle ne consomme pas de courant.'],
+ ['La tension se mesure entre deux points ; l’intensité se mesure en un point du circuit.',true,'C’est pour cela que le voltmètre est en parallèle et l’ampèremètre en série.'],
+ ['Pour mesurer l’intensité dans une lampe, on branche l’ampèremètre à ses bornes.',false,'À ses bornes, il court-circuite la lampe. Il faut ouvrir le circuit et l’insérer en série.'],
+ ['Aux bornes d’un interrupteur ouvert, la tension est nulle puisqu’aucun courant ne passe.',false,'C’est l’inverse : toute la tension du générateur se retrouve aux bornes de l’interrupteur ouvert.'],
+ ['Aux bornes d’un fil de connexion parcouru par un courant, la tension est quasi nulle.',true,'Les deux extrémités du fil sont au même niveau : pas de dénivelé, U ≈ 0 V.'],
+ ['Deux lampes identiques en dérivation ont la même tension à leurs bornes.',true,'En dérivation, chaque branche est reliée aux mêmes deux points : même tension.'],
+ ['Une intensité de −0,25 A signifie que le courant circule dans le sens inverse de la flèche.',true,'L’intensité est une grandeur algébrique. Le signe indique le sens par rapport au fléchage.'],
+ ['Un oiseau posé sur une ligne à 20 000 V s’électrocute forcément.',false,'Ses deux pattes sont sur le même fil, au même potentiel : la tension entre ses pattes est quasi nulle, donc aucun courant ne le traverse.'],
+ ['Le voltmètre affiche 230 V. On peut aussi dire « il y a 230 V de courant ».',false,'Le courant se mesure en ampères. 230 V est une tension. On dit « une tension de 230 V ».'],
+ ['Si on double la tension aux bornes d’une lampe, l’intensité qui la traverse augmente aussi.',true,'Pour une résistance, U = R × I : la tension « pousse » le courant. Teste-le avec le curseur.']
+];
+let qState={};
+function renderQuiz(){const q=$('quiz');q.innerHTML='';let ok=0,n=0;
+  QUIZ.forEach(([s,ans,ex],i)=>{const st=qState[i];if(st!==undefined){n++;if(st===ans)ok++;}
+    const d=document.createElement('div');d.className='card'+(st===undefined?'':st===ans?' right':' wrong');
+    d.innerHTML=`<span class="num">Affirmation ${i+1}</span><p class="stmt">${s}</p><div class="ans"><button id="q${i}v" ${st!==undefined?'disabled':''}>Vrai</button><button id="q${i}f" ${st!==undefined?'disabled':''}>Faux</button></div>`+
+      (st!==undefined?`<p class="ex"><b class="${st===ans?'v':'x'}">${st===ans?'Bonne réponse.':'Raté.'}</b> C'est <b>${ans?'vrai':'faux'}</b>. ${ex}</p>`:'');
+    q.appendChild(d);
+    if(st===undefined){d.querySelector('#q'+i+'v').onclick=()=>{qState[i]=true;renderQuiz();};d.querySelector('#q'+i+'f').onclick=()=>{qState[i]=false;renderQuiz();};}
+  });
+  $('qScore').textContent='Score : '+ok+' / '+n+(n===QUIZ.length?' (terminé)':'');}
+$('qReset').addEventListener('click',()=>{qState={};renderQuiz();});
+
+buildCircuit();renderMissions();renderQuiz();update();requestAnimationFrame(tick);
+})();
+</script>
+<p style="max-width:1180px;margin:32px auto 0;font-size:.85rem;color:var(--muted)"><a href="https://yanissegheraibia-0403.github.io/" style="color:inherit">← Tous les TP virtuels</a></p>
+</body>
+</html>
